@@ -153,6 +153,7 @@ async function bruteForceConfirm(edges, vertices, setEdges, distance, delay) {
           setEdges([...edges]);
         }
       } else {
+        console.log("false!");
         return false;
       }
     }
@@ -211,7 +212,9 @@ async function checkEdgesDijkstra(edges, vertices, setEdges, distance, delay, in
 
     //Step 4
     if (colorGroup.some((colorGroupIndex) => colorGroupIndex == index)) {
-      if (unvisited[index].tenativeDistance > distance) {
+      if (unvisited[index].tenativeDistance <= distance && unvisited[index].tenativeDistance != 0) {
+        console.log(unvisited[index].tenativeDistance);
+        console.log(distance);
         return false;
       }
       colorGroupMembersVisited++;
@@ -223,6 +226,7 @@ async function checkEdgesDijkstra(edges, vertices, setEdges, distance, delay, in
       }
     }
     unvisited[index] = null;
+    console.log(unvisited);
 
     let smallestDistance = Infinity;
     unvisited.forEach((vertex, index2) => {
@@ -244,7 +248,7 @@ async function checkEdgesDijkstra(edges, vertices, setEdges, distance, delay, in
   return true;
 }
 
-async function dijkstraConfirm(edges, vertices, setEdges, setVertices, distance, delay) {
+async function dijkstraConfirm(edges, vertices, setEdges, distance, delay) {
   const distances = {} //this object takes in two vertices, and outputs the distance between them
   const colorGroups = {};
   vertices.forEach((vertex, index) => {
@@ -264,6 +268,7 @@ async function dijkstraConfirm(edges, vertices, setEdges, setVertices, distance,
   for (let index in vertices) {
     let vertex = vertices[index];
     if (vertex != null) {
+      console.log(vertex.color);
       if (await checkEdgesDijkstra(edges, vertices, setEdges, distance, delay, index, distances, colorGroups[vertex.color])) {
         if (delay != 0) {
           edges.forEach((edge) => {
@@ -274,6 +279,7 @@ async function dijkstraConfirm(edges, vertices, setEdges, setVertices, distance,
           setEdges([...edges]);
         }
       } else {
+        console.log("false!!");
         return false;
       }
     }
@@ -327,7 +333,7 @@ export default function App() {
           <Button variant='contained' onClick={async () => {
             let goodGraph = false
             while (!goodGraph) {
-              const newGraph = createNewGraph(30, 50, 9, 3, setEdges, setVertices);
+              const newGraph = createNewGraph(30, 20, 9, 3, setEdges, setVertices);
               await new Promise(r => setTimeout(r, 50));
               goodGraph = await bruteForceConfirm(newGraph.edges, newGraph.vertices, setEdges, 2, 0);
             }
@@ -340,7 +346,7 @@ export default function App() {
             Brute Force
           </Button>
           <Button variant='contained' onClick={async () => {
-            dijkstraConfirm(edges, vertices, setEdges, setVertices, 2, 1);
+            dijkstraConfirm(edges, vertices, setEdges, 2, 1);
           }}>
             Dijkstra
           </Button>
