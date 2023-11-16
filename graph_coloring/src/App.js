@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Line, PerspectiveCamera } from '@react-three/drei'
-import { Box, Button, Stack } from '@mui/material'
+import { Box, Button, Stack, TextField } from '@mui/material'
 import _ from 'lodash'
 
 function ThreeVertex({ position, color }) {
@@ -98,22 +98,11 @@ async function checkEdges(edges, vertices, setEdges, initialVertex, distance, de
 
   //get all vertices this connects to
   let connectingEdges = [];
-  if (distance == 1) {
-    console.log(edges);
-  }
   edges.forEach((edge, index2) => {
-    if (distance == 1) {
-      console.log(edge);
-      console.log(index);
-    }
     if ((edge.vertices[0] == index || edge.vertices[1] == index)) {
       connectingEdges.push(index2);
     }
   });
-
-  if (distance == 1) {
-    console.log(connectingEdges);
-  }
 
   for (let edgeIndex in connectingEdges) {
     if (delay != 0) {
@@ -126,31 +115,17 @@ async function checkEdges(edges, vertices, setEdges, initialVertex, distance, de
     }
 
     if (edges[connectingEdges[edgeIndex]].vertices[0] == index) {
-      if (vertices[edges[connectingEdges[edgeIndex]].vertices[1]].color === color) {
-        if (_.isEqual(initialVertex, vertices[edges[connectingEdges[edgeIndex]].vertices[1]])) {
-          console.log(initialVertex);
-          console.log(vertices[edges[connectingEdges[edgeIndex]].vertices[1]]);
-        } else {
-          console.log("false!");
-          return false;
-        }
+      if (vertices[edges[connectingEdges[edgeIndex]].vertices[1]].color === color && !_.isEqual(initialVertex, vertices[edges[connectingEdges[edgeIndex]].vertices[1]])) {
+        return false;
       }
       if (!await checkEdges(edges, vertices, setEdges, initialVertex, distance - 1, delay, color, edges[connectingEdges[edgeIndex]].vertices[1])) {
-        console.log("false!");
         return false;
       }
     } else {
-      if (vertices[edges[connectingEdges[edgeIndex]].vertices[0]].color === color) {
-        if (_.isEqual(initialVertex, vertices[edges[connectingEdges[edgeIndex]].vertices[0]])) {
-          console.log(initialVertex);
-          console.log(vertices[edges[connectingEdges[edgeIndex]].vertices[0]]);
-        } else {
-          console.log("false!");
-          return false;
-        }
+      if (vertices[edges[connectingEdges[edgeIndex]].vertices[0]].color === color && !_.isEqual(initialVertex, vertices[edges[connectingEdges[edgeIndex]].vertices[0]])) {
+        return false;
       }
       if (!await checkEdges(edges, vertices, setEdges, initialVertex, distance - 1, delay, color, edges[connectingEdges[edgeIndex]].vertices[0])) {
-        console.log("false!");
         return false;
       }
     }
@@ -158,7 +133,6 @@ async function checkEdges(edges, vertices, setEdges, initialVertex, distance, de
 
   //we can't check any valid edges, so there were no matching colors
   return true;
-
 }
 
 async function bruteForceConfirm(edges, vertices, setEdges, distance, delay) {
@@ -175,7 +149,6 @@ async function bruteForceConfirm(edges, vertices, setEdges, distance, delay) {
           setEdges([...edges]);
         }
       } else {
-        console.log("false!");
         return false;
       }
     }
@@ -192,22 +165,19 @@ async function checkEdgesDijkstra(edges, vertices, setEdges, distance, delay, in
   const unvisited = JSON.parse(JSON.stringify(vertices));
   let index = initialIndex;
 
+  //we can take a shortcut if we've already visited the path between two same-color nodes before
   colorGroup.forEach((colorGroupIndex) => {
     if (distances[[index, colorGroupIndex]]) {
       if (distances[[index, colorGroupIndex]] <= distance) {
-        console.log("failed the shortcut");
         return false;
       } else {
-        console.log("shortcut!");
         colorGroupMembersVisited++;
         unvisited[colorGroupIndex] = null;
       }
     } else if (distances[[colorGroupIndex, index]]) {
       if (distances[[colorGroupIndex, index]] <= distance) {
-        console.log("failed the shortcut");
         return false;
       } else {
-        console.log("shortcut!");
         colorGroupMembersVisited++;
         unvisited[colorGroupIndex] = null;
       }
@@ -248,11 +218,9 @@ async function checkEdgesDijkstra(edges, vertices, setEdges, distance, delay, in
       if (edges[connectingEdges[edgeIndex]].vertices[0] == index) {
         let distance = unvisited[index].tenativeDistance + 1;
         unvisited[edges[connectingEdges[edgeIndex]].vertices[1]].tenativeDistance = Math.min(distance, unvisited[edges[connectingEdges[edgeIndex]].vertices[1]].tenativeDistance);
-        distances[[index, edges[connectingEdges[edgeIndex]].vertices[1]]] = unvisited[edges[connectingEdges[edgeIndex]].vertices[1]].tenativeDistance;
       } else {
         let distance = unvisited[index].tenativeDistance + 1;
         unvisited[edges[connectingEdges[edgeIndex]].vertices[0]].tenativeDistance = Math.min(distance, unvisited[edges[connectingEdges[edgeIndex]].vertices[0]].tenativeDistance);
-        distances[[index, edges[connectingEdges[edgeIndex]].vertices[0]]] = unvisited[edges[connectingEdges[edgeIndex]].vertices[0]].tenativeDistance;
       }
     }
 
@@ -261,6 +229,7 @@ async function checkEdgesDijkstra(edges, vertices, setEdges, distance, delay, in
       if (unvisited[index].tenativeDistance <= distance && unvisited[index].tenativeDistance != 0) {
         return false;
       }
+      distances[[initialIndex, index]] = unvisited[index].tenativeDistance;
       colorGroupMembersVisited++;
       //Step 5a
       if (colorGroupMembersVisited == colorGroup.length) {
@@ -329,9 +298,14 @@ async function dijkstraConfirm(edges, vertices, setEdges, distance, delay) {
 export default function App() {
   const [vertices, setVertices] = useState([]);
   const [edges, setEdges] = useState([]);
+  const [numVertices, setNumVertices] = useState(30);
+  const [numEdges, setNumEdges] = useState(20);
+  const [numColors, setNumColors] = useState(9);
+  const [delay, setDelay] = useState(1);
+  const [distance, setDistance] = useState(2);
 
   useEffect(() => {
-    createNewGraph(30, 50, 9, 3, setEdges, setVertices);
+    createNewGraph(numVertices, numEdges, numColors, 3, setEdges, setVertices);
   }, []);
 
   return (
@@ -363,40 +337,103 @@ export default function App() {
         </Canvas>
       </Box>
       <Box sx={{ width: "100vw", height: 98 }}>
-        <Stack direction="row" spacing={1} sx={{ m: 1 }}>
-          <Button variant='contained' onClick={async () => {
-            createNewGraph(30, 50, 9, 3, setEdges, setVertices);
-          }}>
-            Generate New Graph
-          </Button>
-          <Button variant='contained' onClick={async () => {
-            let goodGraph = false
-            while (!goodGraph) {
-              const newGraph = createNewGraph(30, 20, 9, 3, setEdges, setVertices);
-              await new Promise(r => setTimeout(r, 50));
-              goodGraph = await bruteForceConfirm(newGraph.edges, newGraph.vertices, setEdges, 2, 0);
-            }
-          }}>
-            Generate Low Chromasity Graph
-          </Button>
-          <Button variant='contained' onClick={async () => {
-            bruteForceConfirm(edges, vertices, setEdges, 2, 1);
-          }}>
-            Brute Force
-          </Button>
-          <Button variant='contained' onClick={async () => {
-            dijkstraConfirm(edges, vertices, setEdges, 2, 1);
-          }}>
-            Dijkstra
-          </Button>
-          <Button variant='contained' onClick={() => {
-            edges.forEach((edge) => {
-              edge.color = "black";
-            });
-            setEdges([...edges]);
-          }}>
-            Reset
-          </Button>
+        <Stack direction="row" sx={{ m: 1 }} justifyContent="space-between">
+          <Stack direction="row" spacing={1}>
+            <Button variant='contained' onClick={async () => {
+              createNewGraph(numVertices, numEdges, numColors, 3, setEdges, setVertices);
+            }}>
+              Generate New Graph
+            </Button>
+            <Button variant='contained' onClick={async () => {
+              let goodGraph = false
+              while (!goodGraph) {
+                const newGraph = createNewGraph(numVertices, numEdges, numColors, 3, setEdges, setVertices);
+                await new Promise(r => setTimeout(r, delay * 50));
+                goodGraph = await bruteForceConfirm(newGraph.edges, newGraph.vertices, setEdges, distance, 0);
+              }
+            }}>
+              Generate Low Chromatic Graph
+            </Button>
+            <Button variant='contained' onClick={async () => {
+              bruteForceConfirm(edges, vertices, setEdges, distance, delay);
+            }}>
+              Brute Force
+            </Button>
+            <Button variant='contained' onClick={async () => {
+              dijkstraConfirm(edges, vertices, setEdges, distance, delay);
+            }}>
+              Dijkstra
+            </Button>
+            <Button color="error" variant='contained' onClick={() => {
+              edges.forEach((edge) => {
+                edge.color = "black";
+              });
+              setEdges([...edges]);
+            }}>
+              Reset Graph
+            </Button>
+          </Stack>
+          <Stack direction="row" spacing={1}>
+            <TextField
+              sx={{ width: 150 }}
+              label="Num Vertices"
+              type="number"
+              variant="filled"
+              value={numVertices}
+              onChange={(event) => {
+                setNumVertices(event.target.value);
+              }}
+            />
+            <TextField
+              sx={{ width: 100 }}
+              label="Num Edges"
+              type="number"
+              variant="filled"
+              value={numEdges}
+              onChange={(event) => {
+                setNumEdges(event.target.value);
+              }}
+            />
+            <TextField
+              sx={{ width: 100 }}
+              label="Num Colors"
+              type="number"
+              variant="filled"
+              value={numColors}
+              onChange={(event) => {
+                setNumColors(event.target.value);
+              }}
+            />
+            <TextField
+              sx={{ width: 100 }}
+              label="Distance"
+              type="number"
+              variant="filled"
+              value={distance}
+              onChange={(event) => {
+                setDistance(event.target.value);
+              }}
+            />
+            <TextField
+              sx={{ width: 150 }}
+              label="Rendering Delay"
+              type="number"
+              variant="filled"
+              value={delay}
+              onChange={(event) => {
+                setDelay(event.target.value);
+              }}
+            />
+            <Button color="error" variant='contained' onClick={() => {
+              setNumVertices(30);
+              setNumEdges(20);
+              setNumColors(9);
+              setDistance(2);
+              setDelay(1);
+            }}>
+              Reset Values
+            </Button>
+          </Stack>
         </Stack>
       </Box>
     </Stack>
