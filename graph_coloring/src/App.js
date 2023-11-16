@@ -352,7 +352,7 @@ export default function App() {
                 goodGraph = await bruteForceConfirm(newGraph.edges, newGraph.vertices, setEdges, distance, 0);
               }
             }}>
-              Generate Low Chromatic Graph
+              Generate Low Chromatic Graph 
             </Button>
             <Button variant='contained' onClick={async () => {
               bruteForceConfirm(edges, vertices, setEdges, distance, delay);
