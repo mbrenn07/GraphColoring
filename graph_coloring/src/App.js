@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Line, PerspectiveCamera } from '@react-three/drei'
 import { Box, Button, Stack } from '@mui/material'
+import _ from 'lodash'
 
 function ThreeVertex({ position, color }) {
   return (
@@ -89,7 +90,7 @@ function createNewGraph(numPoints, numEdges, numColors, scalarFactor, setEdges, 
   return { edges: edges, vertices: vertices };
 }
 
-async function checkEdges(edges, vertices, setEdges, edgesChecked, distance, delay, color, index) {
+async function checkEdges(edges, vertices, setEdges, initialVertex, distance, delay, color, index) {
   //base case, we never found a same color vertex
   if (distance === 0) {
     return true;
@@ -97,11 +98,22 @@ async function checkEdges(edges, vertices, setEdges, edgesChecked, distance, del
 
   //get all vertices this connects to
   let connectingEdges = [];
+  if (distance == 1) {
+    console.log(edges);
+  }
   edges.forEach((edge, index2) => {
-    if ((edge.vertices[0] == index || edge.vertices[1] == index) && !edgesChecked.some((edgeIndex) => edgeIndex == index2)) {
+    if (distance == 1) {
+      console.log(edge);
+      console.log(index);
+    }
+    if ((edge.vertices[0] == index || edge.vertices[1] == index)) {
       connectingEdges.push(index2);
     }
   });
+
+  if (distance == 1) {
+    console.log(connectingEdges);
+  }
 
   for (let edgeIndex in connectingEdges) {
     if (delay != 0) {
@@ -109,24 +121,36 @@ async function checkEdges(edges, vertices, setEdges, edgesChecked, distance, del
       setEdges([...edges]);
     }
 
-    edgesChecked.push(connectingEdges[edgeIndex]);
-
     if (delay != 0) {
       await new Promise(r => setTimeout(r, delay * 250));
     }
 
     if (edges[connectingEdges[edgeIndex]].vertices[0] == index) {
       if (vertices[edges[connectingEdges[edgeIndex]].vertices[1]].color === color) {
-        return false;
+        if (_.isEqual(initialVertex, vertices[edges[connectingEdges[edgeIndex]].vertices[1]])) {
+          console.log(initialVertex);
+          console.log(vertices[edges[connectingEdges[edgeIndex]].vertices[1]]);
+        } else {
+          console.log("false!");
+          return false;
+        }
       }
-      if (!await checkEdges(edges, vertices, setEdges, edgesChecked, distance - 1, delay, color, edges[connectingEdges[edgeIndex]].vertices[1])) {
+      if (!await checkEdges(edges, vertices, setEdges, initialVertex, distance - 1, delay, color, edges[connectingEdges[edgeIndex]].vertices[1])) {
+        console.log("false!");
         return false;
       }
     } else {
       if (vertices[edges[connectingEdges[edgeIndex]].vertices[0]].color === color) {
-        return false;
+        if (_.isEqual(initialVertex, vertices[edges[connectingEdges[edgeIndex]].vertices[0]])) {
+          console.log(initialVertex);
+          console.log(vertices[edges[connectingEdges[edgeIndex]].vertices[0]]);
+        } else {
+          console.log("false!");
+          return false;
+        }
       }
-      if (!await checkEdges(edges, vertices, setEdges, edgesChecked, distance - 1, delay, color, edges[connectingEdges[edgeIndex]].vertices[1])) {
+      if (!await checkEdges(edges, vertices, setEdges, initialVertex, distance - 1, delay, color, edges[connectingEdges[edgeIndex]].vertices[0])) {
+        console.log("false!");
         return false;
       }
     }
@@ -140,9 +164,8 @@ async function checkEdges(edges, vertices, setEdges, edgesChecked, distance, del
 async function bruteForceConfirm(edges, vertices, setEdges, distance, delay) {
   for (let index in vertices) {
     let vertex = vertices[index];
-    let edgesChecked = [];
     if (vertex != null) {
-      if (await checkEdges(edges, vertices, setEdges, edgesChecked, distance, delay, vertex.color, index)) {
+      if (await checkEdges(edges, vertices, setEdges, vertex, distance, delay, vertex.color, index)) {
         if (delay != 0) {
           edges.forEach((edge) => {
             if (edge.color == "red") {
@@ -168,6 +191,28 @@ async function checkEdgesDijkstra(edges, vertices, setEdges, distance, delay, in
   //Step 1
   const unvisited = JSON.parse(JSON.stringify(vertices));
   let index = initialIndex;
+
+  colorGroup.forEach((colorGroupIndex) => {
+    if (distances[[index, colorGroupIndex]]) {
+      if (distances[[index, colorGroupIndex]] <= distance) {
+        console.log("failed the shortcut");
+        return false;
+      } else {
+        console.log("shortcut!");
+        colorGroupMembersVisited++;
+        unvisited[colorGroupIndex] = null;
+      }
+    } else if (distances[[colorGroupIndex, index]]) {
+      if (distances[[colorGroupIndex, index]] <= distance) {
+        console.log("failed the shortcut");
+        return false;
+      } else {
+        console.log("shortcut!");
+        colorGroupMembersVisited++;
+        unvisited[colorGroupIndex] = null;
+      }
+    }
+  });
 
   //Step 2
   unvisited.forEach((vertex, index2) => {
@@ -203,9 +248,11 @@ async function checkEdgesDijkstra(edges, vertices, setEdges, distance, delay, in
       if (edges[connectingEdges[edgeIndex]].vertices[0] == index) {
         let distance = unvisited[index].tenativeDistance + 1;
         unvisited[edges[connectingEdges[edgeIndex]].vertices[1]].tenativeDistance = Math.min(distance, unvisited[edges[connectingEdges[edgeIndex]].vertices[1]].tenativeDistance);
+        distances[[index, edges[connectingEdges[edgeIndex]].vertices[1]]] = unvisited[edges[connectingEdges[edgeIndex]].vertices[1]].tenativeDistance;
       } else {
         let distance = unvisited[index].tenativeDistance + 1;
         unvisited[edges[connectingEdges[edgeIndex]].vertices[0]].tenativeDistance = Math.min(distance, unvisited[edges[connectingEdges[edgeIndex]].vertices[0]].tenativeDistance);
+        distances[[index, edges[connectingEdges[edgeIndex]].vertices[0]]] = unvisited[edges[connectingEdges[edgeIndex]].vertices[0]].tenativeDistance;
       }
     }
 
