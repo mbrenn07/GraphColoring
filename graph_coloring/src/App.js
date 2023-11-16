@@ -90,7 +90,6 @@ function createNewGraph(numPoints, numEdges, numColors, scalarFactor, setEdges, 
 }
 
 async function checkEdges(edges, vertices, setEdges, edgesChecked, distance, delay, color, index) {
-
   //base case, we never found a same color vertex
   if (distance === 0) {
     return true;
@@ -120,14 +119,14 @@ async function checkEdges(edges, vertices, setEdges, edgesChecked, distance, del
       if (vertices[edges[connectingEdges[edgeIndex]].vertices[1]].color === color) {
         return false;
       }
-      if (await !checkEdges(edges, vertices, setEdges, edgesChecked, distance - 1, delay, color, edges[connectingEdges[edgeIndex]].vertices[1])) {
+      if (!await checkEdges(edges, vertices, setEdges, edgesChecked, distance - 1, delay, color, edges[connectingEdges[edgeIndex]].vertices[1])) {
         return false;
       }
     } else {
       if (vertices[edges[connectingEdges[edgeIndex]].vertices[0]].color === color) {
         return false;
       }
-      if (await !checkEdges(edges, vertices, setEdges, edgesChecked, distance - 1, delay, color, edges[connectingEdges[edgeIndex]].vertices[1])) {
+      if (!await checkEdges(edges, vertices, setEdges, edgesChecked, distance - 1, delay, color, edges[connectingEdges[edgeIndex]].vertices[1])) {
         return false;
       }
     }
@@ -213,20 +212,15 @@ async function checkEdgesDijkstra(edges, vertices, setEdges, distance, delay, in
     //Step 4
     if (colorGroup.some((colorGroupIndex) => colorGroupIndex == index)) {
       if (unvisited[index].tenativeDistance <= distance && unvisited[index].tenativeDistance != 0) {
-        console.log(unvisited[index].tenativeDistance);
-        console.log(distance);
         return false;
       }
       colorGroupMembersVisited++;
-      console.log(colorGroupMembersVisited);
-      console.log(colorGroup.length);
       //Step 5a
       if (colorGroupMembersVisited == colorGroup.length) {
         return true;
       }
     }
     unvisited[index] = null;
-    console.log(unvisited);
 
     let smallestDistance = Infinity;
     unvisited.forEach((vertex, index2) => {
@@ -268,7 +262,6 @@ async function dijkstraConfirm(edges, vertices, setEdges, distance, delay) {
   for (let index in vertices) {
     let vertex = vertices[index];
     if (vertex != null) {
-      console.log(vertex.color);
       if (await checkEdgesDijkstra(edges, vertices, setEdges, distance, delay, index, distances, colorGroups[vertex.color])) {
         if (delay != 0) {
           edges.forEach((edge) => {
@@ -279,7 +272,6 @@ async function dijkstraConfirm(edges, vertices, setEdges, distance, delay) {
           setEdges([...edges]);
         }
       } else {
-        console.log("false!!");
         return false;
       }
     }
