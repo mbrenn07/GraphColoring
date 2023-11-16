@@ -348,7 +348,9 @@ export default function App() {
               let goodGraph = false
               while (!goodGraph) {
                 const newGraph = createNewGraph(numVertices, numEdges, numColors, 3, setEdges, setVertices);
-                await new Promise(r => setTimeout(r, delay * 50));
+                if (delay != 0) {
+                  await new Promise(r => setTimeout(r, delay * 50));
+                }
                 goodGraph = await bruteForceConfirm(newGraph.edges, newGraph.vertices, setEdges, distance, 0);
               }
             }}>
