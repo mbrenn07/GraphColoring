@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Line, PerspectiveCamera } from '@react-three/drei'
-import { Box, Button, Stack, TextField } from '@mui/material'
+import { Box, Button, Stack, TextField, FormControlLabel, Switch, Typography } from '@mui/material'
 import _ from 'lodash'
 
 function ThreeVertex({ position, color }) {
@@ -135,7 +135,9 @@ async function checkEdges(edges, vertices, setEdges, initialVertex, distance, de
   return true;
 }
 
-async function bruteForceConfirm(edges, vertices, setEdges, distance, delay) {
+async function bruteForceConfirm(edges, vertices, setEdges, distance, delay, setTiming) {
+  let currentDate = new Date();
+  let initialTiming = currentDate.getTime();
   for (let index in vertices) {
     let vertex = vertices[index];
     if (vertex != null) {
@@ -149,10 +151,14 @@ async function bruteForceConfirm(edges, vertices, setEdges, distance, delay) {
           setEdges([...edges]);
         }
       } else {
+        currentDate = new Date();
+        setTiming(currentDate.getTime() - initialTiming);
         return false;
       }
     }
   }
+  currentDate = new Date();
+  setTiming(currentDate.getTime() - initialTiming);
   return true;
 }
 
@@ -258,7 +264,10 @@ async function checkEdgesDijkstra(edges, vertices, setEdges, distance, delay, in
   return true;
 }
 
-async function dijkstraConfirm(edges, vertices, setEdges, distance, delay) {
+async function dijkstraConfirm(edges, vertices, setEdges, distance, delay, setTiming) {
+  let currentDate = new Date();
+  let initialTiming = currentDate.getTime();
+  console.log(initialTiming);
   const distances = {} //this object takes in two vertices, and outputs the distance between them
   const colorGroups = {};
   vertices.forEach((vertex, index) => {
@@ -288,10 +297,14 @@ async function dijkstraConfirm(edges, vertices, setEdges, distance, delay) {
           setEdges([...edges]);
         }
       } else {
+        currentDate = new Date();
+        setTiming(currentDate.getTime() - initialTiming);
         return false;
       }
     }
   }
+  currentDate = new Date();
+  setTiming(currentDate.getTime() - initialTiming);
   return true;
 }
 
@@ -303,141 +316,160 @@ export default function App() {
   const [numColors, setNumColors] = useState(9);
   const [delay, setDelay] = useState(1);
   const [distance, setDistance] = useState(2);
+  const [useDijkstra, setUseDijkstra] = useState(false);
+  const [timing, setTiming] = useState(0);
 
   useEffect(() => {
     createNewGraph(numVertices, numEdges, numColors, 3, setEdges, setVertices);
   }, []);
 
   return (
-    <Stack>
-      <Box sx={{ width: "100vw", height: "calc(100vh - 100px)", borderBottom: "black 2px solid" }}>
-        <Canvas>
-          <PerspectiveCamera position={[100, 100, 150]} makeDefault />
-          <ambientLight intensity={Math.PI / 2} />
-          <spotLight position={[100, 100, 150]} angle={0.15} penumbra={1} decay={0} intensity={Math.PI} />
-          <pointLight position={[100, 100, 150]} decay={0} intensity={Math.PI} />
-          {vertices.map((vertex) => {
-            if (vertex != null) {
-              return (
-                <ThreeVertex key={vertex.position[0] + "," + vertex.position[1] + "," + vertex.position[2]} position={vertex.position} color={vertex.color} />
-              );
-            }
-            return null;
-          })}
-          {edges.map((edge) => {
-            if (vertices[edge.vertices[0]] && vertices[edge.vertices[1]]) {
-              return (
-                <ThreeEdge key={edge.vertices[0] + "," + edge.vertices[1]} points={[vertices[edge.vertices[0]].position, vertices[edge.vertices[1]].position]} color={edge.color} />
-              );
-            }
-            return null;
-          })}
-
-          <OrbitControls />
-        </Canvas>
+    <>
+      <Box sx={{ position: "absolute", zIndex: 1, border: "2px solid black", width: 250, height: 40, left: "100%", transform: "translateX(-100%)" }}>
+        <Typography sx={{ m: 1 }}>Timing: {timing} ms last run</Typography>
       </Box>
-      <Box sx={{ width: "100vw", height: 98 }}>
-        <Stack direction="row" sx={{ m: 1 }} justifyContent="space-between">
-          <Stack direction="row" spacing={1}>
-            <Button variant='contained' onClick={async () => {
-              createNewGraph(numVertices, numEdges, numColors, 3, setEdges, setVertices);
-            }}>
-              Generate New Graph
-            </Button>
-            <Button variant='contained' onClick={async () => {
-              let goodGraph = false
-              while (!goodGraph) {
-                const newGraph = createNewGraph(numVertices, numEdges, numColors, 3, setEdges, setVertices);
-                if (delay != 0) {
-                  await new Promise(r => setTimeout(r, delay * 50));
-                }
-                goodGraph = await bruteForceConfirm(newGraph.edges, newGraph.vertices, setEdges, distance, 0);
+      <Stack>
+        <Box sx={{ width: "100vw", height: "calc(100vh - 100px)", borderBottom: "black 2px solid" }}>
+          <Canvas>
+            <PerspectiveCamera position={[100, 100, 150]} makeDefault />
+            <ambientLight intensity={Math.PI / 2} />
+            <spotLight position={[100, 100, 150]} angle={0.15} penumbra={1} decay={0} intensity={Math.PI} />
+            <pointLight position={[100, 100, 150]} decay={0} intensity={Math.PI} />
+            {vertices.map((vertex) => {
+              if (vertex != null) {
+                return (
+                  <ThreeVertex key={vertex.position[0] + "," + vertex.position[1] + "," + vertex.position[2]} position={vertex.position} color={vertex.color} />
+                );
               }
-            }}>
-              Generate Low Chromatic Graph 
-            </Button>
-            <Button variant='contained' onClick={async () => {
-              bruteForceConfirm(edges, vertices, setEdges, distance, delay);
-            }}>
-              Brute Force
-            </Button>
-            <Button variant='contained' onClick={async () => {
-              dijkstraConfirm(edges, vertices, setEdges, distance, delay);
-            }}>
-              Dijkstra
-            </Button>
-            <Button color="error" variant='contained' onClick={() => {
-              edges.forEach((edge) => {
-                edge.color = "black";
-              });
-              setEdges([...edges]);
-            }}>
-              Reset Graph
-            </Button>
+              return null;
+            })}
+            {edges.map((edge) => {
+              if (vertices[edge.vertices[0]] && vertices[edge.vertices[1]]) {
+                return (
+                  <ThreeEdge key={edge.vertices[0] + "," + edge.vertices[1]} points={[vertices[edge.vertices[0]].position, vertices[edge.vertices[1]].position]} color={edge.color} />
+                );
+              }
+              return null;
+            })}
+
+            <OrbitControls />
+          </Canvas>
+        </Box>
+        <Box sx={{ width: "100vw", height: 98 }}>
+          <Stack direction="row" sx={{ m: 1 }} spacing={1} justifyContent="space-between">
+            <Stack direction="row" spacing={1}>
+              <Button variant='contained' onClick={async () => {
+                createNewGraph(numVertices, numEdges, numColors, 3, setEdges, setVertices);
+              }}>
+                Generate New Graph
+              </Button>
+              <Button variant='contained' onClick={async () => {
+                let goodGraph = false
+                while (!goodGraph) {
+                  const newGraph = createNewGraph(numVertices, numEdges, numColors, 3, setEdges, setVertices);
+                  if (delay != 0) {
+                    await new Promise(r => setTimeout(r, delay * 50));
+                  }
+                  if (useDijkstra) {
+                    goodGraph = await dijkstraConfirm(newGraph.edges, newGraph.vertices, setEdges, distance, 0, setTiming);
+                  } else {
+                    goodGraph = await bruteForceConfirm(newGraph.edges, newGraph.vertices, setEdges, distance, 0, setTiming);
+                  }
+                }
+              }}>
+                Generate Low Chromatic Graph
+              </Button>
+              <FormControlLabel control={
+                <Switch
+                  checked={useDijkstra}
+                  onChange={(event) => {
+                    setUseDijkstra(event.target.checked);
+                  }}
+                />
+              } label="Use Dijkstra" />
+              <Button variant='contained' onClick={async () => {
+                bruteForceConfirm(edges, vertices, setEdges, distance, delay, setTiming);
+              }}>
+                Brute Force
+              </Button>
+              <Button sx={{ minWidth: 93 }} variant='contained' onClick={async () => {
+                dijkstraConfirm(edges, vertices, setEdges, distance, delay, setTiming);
+              }}>
+                Dijkstra
+              </Button>
+              <Button color="error" variant='contained' onClick={() => {
+                edges.forEach((edge) => {
+                  edge.color = "black";
+                });
+                setEdges([...edges]);
+              }}>
+                Reset Graph
+              </Button>
+            </Stack>
+            <Stack direction="row" spacing={1}>
+              <TextField
+                sx={{ width: 150 }}
+                label="Num Vertices"
+                type="number"
+                variant="filled"
+                value={numVertices}
+                onChange={(event) => {
+                  setNumVertices(event.target.value);
+                }}
+              />
+              <TextField
+                sx={{ width: 100 }}
+                label="Num Edges"
+                type="number"
+                variant="filled"
+                value={numEdges}
+                onChange={(event) => {
+                  setNumEdges(event.target.value);
+                }}
+              />
+              <TextField
+                sx={{ width: 100 }}
+                label="Num Colors"
+                type="number"
+                variant="filled"
+                value={numColors}
+                onChange={(event) => {
+                  setNumColors(event.target.value);
+                }}
+              />
+              <TextField
+                sx={{ width: 100 }}
+                label="Distance"
+                type="number"
+                variant="filled"
+                value={distance}
+                onChange={(event) => {
+                  setDistance(event.target.value);
+                }}
+              />
+              <TextField
+                sx={{ width: 150 }}
+                label="Rendering Delay"
+                type="number"
+                variant="filled"
+                value={delay}
+                onChange={(event) => {
+                  setDelay(event.target.value);
+                }}
+              />
+              <Button color="error" variant='contained' onClick={() => {
+                setNumVertices(30);
+                setNumEdges(20);
+                setNumColors(9);
+                setDistance(2);
+                setDelay(1);
+              }}>
+                Reset Values
+              </Button>
+            </Stack>
           </Stack>
-          <Stack direction="row" spacing={1}>
-            <TextField
-              sx={{ width: 150 }}
-              label="Num Vertices"
-              type="number"
-              variant="filled"
-              value={numVertices}
-              onChange={(event) => {
-                setNumVertices(event.target.value);
-              }}
-            />
-            <TextField
-              sx={{ width: 100 }}
-              label="Num Edges"
-              type="number"
-              variant="filled"
-              value={numEdges}
-              onChange={(event) => {
-                setNumEdges(event.target.value);
-              }}
-            />
-            <TextField
-              sx={{ width: 100 }}
-              label="Num Colors"
-              type="number"
-              variant="filled"
-              value={numColors}
-              onChange={(event) => {
-                setNumColors(event.target.value);
-              }}
-            />
-            <TextField
-              sx={{ width: 100 }}
-              label="Distance"
-              type="number"
-              variant="filled"
-              value={distance}
-              onChange={(event) => {
-                setDistance(event.target.value);
-              }}
-            />
-            <TextField
-              sx={{ width: 150 }}
-              label="Rendering Delay"
-              type="number"
-              variant="filled"
-              value={delay}
-              onChange={(event) => {
-                setDelay(event.target.value);
-              }}
-            />
-            <Button color="error" variant='contained' onClick={() => {
-              setNumVertices(30);
-              setNumEdges(20);
-              setNumColors(9);
-              setDistance(2);
-              setDelay(1);
-            }}>
-              Reset Values
-            </Button>
-          </Stack>
-        </Stack>
-      </Box>
-    </Stack>
+        </Box>
+      </Stack>
+    </>
   )
 }
